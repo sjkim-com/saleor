@@ -16,6 +16,7 @@ from ....core.utils.url import validate_storefront_url
 from ....order.utils import match_orders_with_new_user
 from ...account.i18n import I18nMixin
 from ...account.types import Address, AddressInput, User
+from ...core.enums import LanguageCodeEnum
 from ...core.mutations import (
     BaseMutation,
     ModelDeleteMutation,
@@ -353,7 +354,9 @@ class UserAddressInput(graphene.InputObjectType):
 
 
 class CustomerInput(UserInput, UserAddressInput):
-    pass
+    language_code = graphene.Field(
+        LanguageCodeEnum, required=False, description="User language code."
+    )
 
 
 class UserCreateInput(CustomerInput):

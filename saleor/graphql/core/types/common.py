@@ -1,7 +1,6 @@
 import graphene
 
 from ....product.templatetags.product_images import get_thumbnail
-from ...translations.enums import LanguageCodeEnum
 from ..enums import (
     AccountErrorCode,
     AppErrorCode,
@@ -14,6 +13,7 @@ from ..enums import (
     GiftCardErrorCode,
     InvoiceErrorCode,
     JobStatusEnum,
+    LanguageCodeEnum,
     MenuErrorCode,
     MetadataErrorCode,
     OrderErrorCode,
