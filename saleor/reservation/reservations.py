@@ -1,6 +1,8 @@
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
-from django.db import F, transaction
+from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from .models import Reservation
@@ -20,7 +22,7 @@ def _get_reservation_expiration() -> "datetime":
 
 
 @transaction.atomic
-def reserve_stock_for_user(user: "User", quantity: int, product_variant: "ProductVariant"):
+def reserve_stock_for_user(user: "User", quantity: int, product_variant: "ProductVariant") -> "Reservation":
     """Reserve stock of given product variant for the user.
 
     Function lock for update all reservations for variant and user. Next, create or
@@ -29,24 +31,30 @@ def reserve_stock_for_user(user: "User", quantity: int, product_variant: "Produc
     reservation = (
         Reservation.objects.select_for_update(of=("self",))
         .filter(user=user, product_variant=product_variant)
+        .first()
     )
 
     if reservation:
+        updated_quantity = reservation.quantity + quantity
         reservation.quantity = F("quantity") + quantity
         reservation.expires = _get_reservation_expiration()
-        reservation.save(updated_fields=["quantity", "expires"])
+        reservation.save(update_fields=["quantity", "expires"])
+        reservation.quantity = updated_quantity
     else:
-        Reservation.objects.create(
+        reservation = Reservation.objects.create(
             user=user,
             quantity=quantity,
             product_variant=product_variant,
             expires=_get_reservation_expiration(),
         )
 
+    return reservation
 
-def remove_user_reservation_of_stock(user: "User", product_variant: "ProductVariant"):
+
+def remove_user_reservation_of_stock(user: "User", product_variant: "ProductVariant") -> bool:
     """Remove reservation of product for given user
 
     Function removes reservations of user and production variant combinations.
     """
-    Reservation.objects.filter(user=user, product_variant=product_variant).delete()
+    rows_deleted = Reservation.objects.filter(user=user, product_variant=product_variant).delete()
+    return bool(rows_deleted)
