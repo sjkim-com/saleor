@@ -1,60 +1,32 @@
-from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
-from django.db import transaction
-from django.db.models import F
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .models import Reservation
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from ..account.models import User
     from ..product.models import ProductVariant
 
 
-RESERVATION_LENGTH = timedelta(minutes=20)
-
-
-def _get_reservation_expiration() -> "datetime":
-    return timezone.now() + RESERVATION_LENGTH
-
-
-@transaction.atomic
-def reserve_stock_for_user(user: "User", quantity: int, product_variant: "ProductVariant") -> "Reservation":
-    """Reserve stock of given product variant for the user.
-
-    Function lock for update all reservations for variant and user. Next, create or
-    update quantity of existing reservation for the user.
-    """
-    reservation = (
-        Reservation.objects.select_for_update(of=("self",))
-        .filter(user=user, product_variant=product_variant)
-        .first()
-    )
-
-    if reservation:
-        updated_quantity = reservation.quantity + quantity
-        reservation.quantity = F("quantity") + quantity
-        reservation.expires = _get_reservation_expiration()
-        reservation.save(update_fields=["quantity", "expires"])
-        reservation.quantity = updated_quantity
-    else:
-        reservation = Reservation.objects.create(
-            user=user,
-            quantity=quantity,
-            product_variant=product_variant,
-            expires=_get_reservation_expiration(),
-        )
-
-    return reservation
-
-
-def remove_user_reservation_of_stock(user: "User", product_variant: "ProductVariant") -> bool:
+def remove_user_stock_reservations(user: "User", product_variants: Iterable["ProductVariant"]):
     """Remove reservation of product for given user
 
-    Function removes reservations of user and production variant combinations.
+    Function removes reservations of user and product variant combinations.
     """
-    rows_deleted = Reservation.objects.filter(user=user, product_variant=product_variant).delete()
-    return bool(rows_deleted)
+    Reservation.objects.filter(user=user, product_variant__in=product_variants).delete()
+
+
+def get_total_reserved_quantity(user: "User", product_variant: "ProductVariant") -> int:
+    reservations = Reservation.objects.filter(
+        product_variant=product_variant,
+        expires__gt=timezone.now(),
+    )
+
+    if user.is_authenticated:
+        reservations = reservations.exclude(user=user)
+
+    results = reservations.aggregate(total_reserved=Coalesce(Sum("quantity"), 0))
+    return results["total_reserved"]

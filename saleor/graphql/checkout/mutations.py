@@ -29,6 +29,9 @@ from ...core.exceptions import InsufficientStock, PermissionDenied, ProductNotPu
 from ...core.transactions import transaction_with_commit_on_errors
 from ...order import models as order_models
 from ...product import models as product_models
+from ...reservation.reservations import (
+    get_total_reserved_quantity, remove_user_stock_reservations
+)
 from ...shipping import models as shipping_models
 from ...warehouse.availability import check_stock_quantity_bulk
 from ..account.i18n import I18nMixin
@@ -95,7 +98,7 @@ def update_checkout_shipping_method_if_invalid(
         checkout.save(update_fields=["shipping_method", "last_change"])
 
 
-def check_lines_quantity(variants, quantities, country):
+def check_lines_quantity(variants, quantities, country, user=None):
     """Clean quantities and check if stock is sufficient for each checkout line."""
     for quantity in quantities:
         if quantity < 0:
@@ -117,6 +120,7 @@ def check_lines_quantity(variants, quantities, country):
                     )
                 }
             )
+    reserved_quantity = get_total_reserved_quantity(user, variant)
     try:
         check_stock_quantity_bulk(variants, country, quantities)
     except InsufficientStock as e:
@@ -208,7 +212,7 @@ class CheckoutCreate(ModelMutation, I18nMixin):
 
     @classmethod
     def clean_checkout_lines(
-        cls, lines, country, channel_id
+        cls, lines, country, channel_id, user
     ) -> Tuple[List[product_models.ProductVariant], List[int]]:
         variant_ids = [line["variant_id"] for line in lines]
         variants = cls.get_nodes_or_error(
@@ -222,7 +226,7 @@ class CheckoutCreate(ModelMutation, I18nMixin):
 
         quantities = [line["quantity"] for line in lines]
         validate_variants_available_for_purchase(variants, channel_id)
-        check_lines_quantity(variants, quantities, country)
+        check_lines_quantity(variants, quantities, country, user)
         return variants, quantities
 
     @classmethod
@@ -306,7 +310,7 @@ class CheckoutCreate(ModelMutation, I18nMixin):
             (
                 cleaned_input["variants"],
                 cleaned_input["quantities"],
-            ) = cls.clean_checkout_lines(lines, country, cleaned_input["channel"].id)
+            ) = cls.clean_checkout_lines(lines, country, cleaned_input["channel"].id, info.context.user)
 
         cleaned_input["shipping_address"] = cls.retrieve_shipping_address(user, data)
         cleaned_input["billing_address"] = cls.retrieve_billing_address(user, data)
@@ -343,6 +347,11 @@ class CheckoutCreate(ModelMutation, I18nMixin):
                     "Can't create checkout with unpublished product.",
                     code=exc.code,
                 )
+
+        # If authenticated, remove any stock reservations made by the user
+        user = info.context.user
+        if user.is_authenticated:
+            remove_user_stock_reservations(user, variants)
 
         # Save addresses
         shipping_address = cleaned_input.get("shipping_address")
@@ -416,7 +425,7 @@ class CheckoutLinesAdd(BaseMutation):
         variants = cls.get_nodes_or_error(variant_ids, "variant_id", ProductVariant)
         quantities = [line.get("quantity") for line in lines]
 
-        check_lines_quantity(variants, quantities, checkout.get_country())
+        check_lines_quantity(variants, quantities, checkout.get_country(), info.context.user)
         validate_variants_available_for_purchase(variants, checkout.channel_id)
 
         if variants and quantities:
@@ -643,7 +652,7 @@ class CheckoutShippingAddressUpdate(BaseMutation, I18nMixin):
 
         # Resolve and process the lines, validating variants quantities
         if lines:
-            cls.process_checkout_lines(lines, country)
+            cls.process_checkout_lines(lines, country, info.context.user)
 
         update_checkout_shipping_method_if_invalid(
             checkout, lines, info.context.discounts

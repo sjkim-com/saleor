@@ -22,7 +22,12 @@ def _get_available_quantity(stocks: StockQuerySet) -> int:
     return max(total_quantity - quantity_allocated, 0)
 
 
-def check_stock_quantity(variant: "ProductVariant", country_code: str, quantity: int):
+def check_stock_quantity(
+    variant: "ProductVariant",
+    country_code: str,
+    quantity: int,
+    reserved_quantity: int = 0,
+):
     """Validate if there is stock available for given variant in given country.
 
     If so - returns None. If there is less stock then required raise InsufficientStock
@@ -33,7 +38,8 @@ def check_stock_quantity(variant: "ProductVariant", country_code: str, quantity:
         if not stocks:
             raise InsufficientStock(variant)
 
-        if quantity > _get_available_quantity(stocks):
+        available_quantity = max(_get_available_quantity(stocks) - reserved_quantity, 0)
+        if quantity > available_quantity:
             raise InsufficientStock(variant)
 
 
