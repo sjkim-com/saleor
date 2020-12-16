@@ -4,13 +4,11 @@ import graphene
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from ...product.models import ProductVariant
 from ...reservation.error_codes import ReservationErrorCode
 from ...reservation import models
-from ...reservation.reservations import (
-    remove_user_stock_reservations
-)
 from ..core.mutations import BaseMutation
 from ..core.types.common import ReservationError
 from ..product.types import ProductVariant
