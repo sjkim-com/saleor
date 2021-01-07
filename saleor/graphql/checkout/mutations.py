@@ -29,9 +29,7 @@ from ...core.exceptions import InsufficientStock, PermissionDenied, ProductNotPu
 from ...core.transactions import transaction_with_commit_on_errors
 from ...order import models as order_models
 from ...product import models as product_models
-from ...reservation.reservations import (
-    get_total_reserved_quantity, remove_user_stock_reservations
-)
+from ...reservation.stock import remove_user_reservations
 from ...shipping import models as shipping_models
 from ...warehouse.availability import check_stock_quantity_bulk
 from ..account.i18n import I18nMixin
@@ -120,9 +118,8 @@ def check_lines_quantity(variants, quantities, country, user=None):
                     )
                 }
             )
-    reserved_quantity = get_total_reserved_quantity(user, variant)
     try:
-        check_stock_quantity_bulk(variants, country, quantities)
+        check_stock_quantity_bulk(variants, country, quantities, user)
     except InsufficientStock as e:
         remaining = e.context["available_quantity"]
         item_name = e.item.display_product()
@@ -351,7 +348,7 @@ class CheckoutCreate(ModelMutation, I18nMixin):
         # If authenticated, remove any stock reservations made by the user
         user = info.context.user
         if user.is_authenticated:
-            remove_user_stock_reservations(user, variants)
+            remove_user_reservations(user, variants)
 
         # Save addresses
         shipping_address = cleaned_input.get("shipping_address")
@@ -598,7 +595,7 @@ class CheckoutShippingAddressUpdate(BaseMutation, I18nMixin):
 
     @classmethod
     def process_checkout_lines(
-        cls, lines: Iterable["CheckoutLineInfo"], country: str
+        cls, lines: Iterable["CheckoutLineInfo"], country: str, user: "User"
     ) -> None:
         variant_ids = [line_info.variant.id for line_info in lines]
         variants = list(
@@ -607,7 +604,7 @@ class CheckoutShippingAddressUpdate(BaseMutation, I18nMixin):
             ).prefetch_related("product__product_type")
         )  # FIXME: is this prefetch needed?
         quantities = [line_info.line.quantity for line_info in lines]
-        check_lines_quantity(variants, quantities, country)
+        check_lines_quantity(variants, quantities, country, user)
 
     @classmethod
     def perform_mutation(cls, _root, info, checkout_id, shipping_address):

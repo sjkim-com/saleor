@@ -1,13 +1,18 @@
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 
 from ..core.exceptions import InsufficientStock
+from ..reservation.stock import (
+    get_reserved_quantity,
+    get_reserved_quantity_bulk,
+)
 from .models import Stock, StockQuerySet
 
 if TYPE_CHECKING:
+    from ..account.models import User
     from ..product.models import Product, ProductVariant
 
 
@@ -26,7 +31,7 @@ def check_stock_quantity(
     variant: "ProductVariant",
     country_code: str,
     quantity: int,
-    reserved_quantity: int = 0,
+    user: Optional["User"] = None,
 ):
     """Validate if there is stock available for given variant in given country.
 
@@ -38,13 +43,16 @@ def check_stock_quantity(
         if not stocks:
             raise InsufficientStock(variant)
 
+        reserved_quantity = get_reserved_quantity(variant, country_code, user)
         available_quantity = max(_get_available_quantity(stocks) - reserved_quantity, 0)
         if quantity > available_quantity:
-            raise InsufficientStock(variant)
+            raise InsufficientStock(variant, context={"available_quantity": available_quantity})
 
 
-def check_stock_quantity_bulk(variants, country_code, quantities):
+def check_stock_quantity_bulk(variants, country_code, quantities, user=None):
     """Validate if there is stock available for given variants in given country.
+
+    If user argument is specified, their reserved amounts are excluded.
 
     :raises InsufficientStock: when there is not enough items in stock for a variant.
     """
@@ -58,9 +66,15 @@ def check_stock_quantity_bulk(variants, country_code, quantities):
     for stock in all_variants_stocks:
         variant_stocks[stock.product_variant_id].append(stock)
 
+    variant_reservations = get_reserved_quantity_bulk(variants, country_code, user)
+
     for variant, quantity in zip(variants, quantities):
         stocks = variant_stocks.get(variant.pk)
-        available_quantity = sum([stock.available_quantity for stock in stocks])
+        reserved_quantity = variant_reservations.get(variant.pk, 0)
+        available_quantity = (
+            sum([stock.available_quantity for stock in stocks]) - reserved_quantity
+        )
+        available_quantity = max(available_quantity, 0)
 
         if not stocks:
             raise InsufficientStock(
