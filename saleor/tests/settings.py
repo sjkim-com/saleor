@@ -43,7 +43,8 @@ MAX_CHECKOUT_LINE_QUANTITY = 50
 
 AUTH_PASSWORD_VALIDATORS = []
 
-PASSWORD_HASHERS = ["saleor.tests.dummy_password_hasher.DummyHasher"]
+# PASSWORD_HASHERS = ["saleor.tests.dummy_password_hasher.DummyHasher"]
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher"]
 PLUGINS_MANAGER = "saleor.plugins.manager.PluginsManager"
 
 PLUGINS = []

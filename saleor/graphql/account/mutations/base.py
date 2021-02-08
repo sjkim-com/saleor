@@ -24,7 +24,7 @@ from ...core.mutations import (
 )
 from ...core.types.common import AccountError
 from ...meta.deprecated.mutations import ClearMetaBaseMutation, UpdateMetaBaseMutation
-from .jwt import CreateToken
+from .jwt import CreateTokenBackup
 
 BILLING_ADDRESS_FIELD = "default_billing_address"
 SHIPPING_ADDRESS_FIELD = "default_shipping_address"
@@ -44,7 +44,7 @@ def can_edit_address(user, address):
     )
 
 
-class SetPassword(CreateToken):
+class SetPassword(CreateTokenBackup):
     class Arguments:
         token = graphene.String(
             description="A one-time token required to set the password.", required=True

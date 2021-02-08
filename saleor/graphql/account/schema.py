@@ -41,7 +41,7 @@ from .mutations.base import (
     UserUpdateMeta,
 )
 from .mutations.jwt import (
-    CreateToken,
+    CreateTokenBackup,
     DeactivateAllUserTokens,
     RefreshToken,
     VerifyToken,
@@ -225,7 +225,7 @@ class AccountQueries(graphene.ObjectType):
 
 class AccountMutations(graphene.ObjectType):
     # Base mutations
-    token_create = CreateToken.Field()
+    token_create_new = CreateTokenBackup.Field()
     token_refresh = RefreshToken.Field()
     token_verify = VerifyToken.Field()
     tokens_deactivate_all = DeactivateAllUserTokens.Field()

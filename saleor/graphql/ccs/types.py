@@ -1,8 +1,11 @@
 import graphene
-
-from ...ccs.models import Business
+from django.contrib.auth import get_user_model
+from graphene import relay
+from ..meta.types import ObjectWithMetadata
+from ...ccs.models import Business, User
 from ..core.connection import CountableDjangoObjectType
-
+from graphene_federation import key
+from ...ccs import models
 
 class Business(CountableDjangoObjectType):
     class Meta:
@@ -100,3 +103,32 @@ class Business(CountableDjangoObjectType):
     user_id = graphene.String()
     zip_cd = graphene.String()
     sf_id = graphene.String()
+
+
+# @key("user_id")
+# @key("email")
+class UserType(CountableDjangoObjectType):
+    class Meta:
+        # model = User
+        description = "Represents user data."
+        interfaces = [relay.Node, ObjectWithMetadata]
+        model = get_user_model()
+        only_fields = [
+            "email",
+            "user_id",
+            "last_connect_dt"
+        ]
+
+
+    # @staticmethod
+    # def resolve_permissions(root: models.User, _info, **_kwargs):
+    #     # deprecated, to remove in #5389
+    #     from .resolvers import resolve_permissions
+    #
+    #     return resolve_permissions(root)
+    #
+    # @staticmethod
+    # def resolve_user_permissions(root: models.User, _info, **_kwargs):
+    #     from .resolvers import resolve_permissions
+    #
+    #     return resolve_permissions(root)

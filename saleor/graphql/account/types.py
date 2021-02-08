@@ -4,6 +4,7 @@ from graphene import relay
 from graphene_federation import key
 
 from ...account import models
+from ...account.models import User
 from ...checkout.utils import get_user_checkout
 from ...core.exceptions import PermissionDenied
 from ...core.permissions import AccountPermissions, OrderPermissions
@@ -230,9 +231,10 @@ class User(CountableDjangoObjectType):
     )
 
     class Meta:
+        model = User
         description = "Represents user data."
         interfaces = [relay.Node, ObjectWithMetadata]
-        model = get_user_model()
+        # model = get_user_model()
         only_fields = [
             "date_joined",
             "default_billing_address",

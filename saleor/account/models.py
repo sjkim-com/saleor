@@ -133,7 +133,7 @@ class UserManager(BaseUserManager):
         return self.get_queryset().filter(is_staff=True)
 
 
-class User(PermissionsMixin, ModelWithMetadata, AbstractBaseUser):
+class User( ModelWithMetadata, AbstractBaseUser):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=256, blank=True)
     last_name = models.CharField(max_length=256, blank=True)

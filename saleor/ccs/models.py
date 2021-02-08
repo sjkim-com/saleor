@@ -1,7 +1,13 @@
+from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
-
-
+from typing import Union
+from ..core.permissions import AccountPermissions, BasePermissionEnum, get_permissions
+from django.contrib.auth.models import _user_has_perm
+from django.db.models import Q
 # Create your models here.
+from ..core.models import ModelWithMetadata
+from django.utils.crypto import get_random_string
 
 class Accessfunction(models.Model):
     function = models.ForeignKey('Function', models.DO_NOTHING)
@@ -992,7 +998,7 @@ class Translate(models.Model):
         unique_together = (('lang_id', 'source'),)
 
 
-class User(models.Model):
+class User(PermissionsMixin, ModelWithMetadata, AbstractBaseUser):
     user_id = models.CharField(primary_key=True, max_length=100)
     ins_dt = models.DateTimeField(blank=True, null=True)
     ins_id = models.CharField(max_length=255, blank=True, null=True)
@@ -1024,6 +1030,58 @@ class User(models.Model):
     user_state_cd = models.CharField(max_length=100, blank=True, null=True)
     user_type_cd = models.CharField(max_length=100, blank=True, null=True)
     sf_id = models.CharField(max_length=100, blank=True, null=True)
+    jwt_token_key = models.CharField(max_length=12, default=get_random_string)
+
+    USERNAME_FIELD = "email"
+
+    class Meta:
+        ordering = ("email",)
+        permissions = (
+            (AccountPermissions.MANAGE_USERS.codename, "Manage customers."),
+            (AccountPermissions.MANAGE_STAFF.codename, "Manage staff."),
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._effective_permissions = None
+
+    @property
+    def effective_permissions(self) -> "QuerySet[Permission]":
+        if self._effective_permissions is None:
+            self._effective_permissions = get_permissions()
+            if not self.is_superuser:
+                self._effective_permissions = self._effective_permissions.filter(
+                    Q(user=self) | Q(group__user=self)
+                )
+        return self._effective_permissions
+
+    @effective_permissions.setter
+    def effective_permissions(self, value: "QuerySet[Permission]"):
+        self._effective_permissions = value
+        # Drop cache for authentication backend
+        self._effective_permissions_cache = None
+
+    def get_full_name(self):
+        if self.first_name or self.last_name:
+            return ("%s %s" % (self.first_name, self.last_name)).strip()
+        if self.default_billing_address:
+            first_name = self.default_billing_address.first_name
+            last_name = self.default_billing_address.last_name
+            if first_name or last_name:
+                return ("%s %s" % (first_name, last_name)).strip()
+        return self.email
+
+    def get_short_name(self):
+        return self.email
+
+    def has_perm(self, perm: Union[BasePermissionEnum, str], obj=None):  # type: ignore
+        # This method is overridden to accept perm as BasePermissionEnum
+        perm = perm.value if hasattr(perm, "value") else perm  # type: ignore
+
+        # Active superusers have all permissions.
+        if self.is_active and self.is_superuser and not self._effective_permissions:
+            return True
+        return _user_has_perm(self, perm, obj)
 
 
 class Userrolehistory(models.Model):

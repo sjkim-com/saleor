@@ -61,7 +61,7 @@ def get_user(payload):
     return user
 
 
-class CreateToken(BaseMutation):
+class CreateTokenBackup(BaseMutation):
     """Mutation that authenticates a user and returns token and user data."""
 
     class Arguments:

@@ -1,6 +1,8 @@
 import graphene
 
 from .mutation.business import BusinessInsert, BusinessUpdate, BusinessDelete
+from .mutation.jwt import CreateToken
+from .mutation.user import UserCreate, UserCreateNew
 from .resolver import resolve_business, resolve_business_id, resolve_business_add1, \
     resolve_business_search
 from .types import Business
@@ -82,6 +84,8 @@ class CcsQueries(graphene.ObjectType):
 
 
 class CcsMutations(graphene.ObjectType):
+    token_create = CreateToken.Field()
+    user_create = UserCreateNew.Field()
     business_insert = BusinessInsert.Field()
     business_update = BusinessUpdate.Field()
     business_delete = BusinessDelete.Field()
