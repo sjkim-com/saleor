@@ -252,6 +252,12 @@ INSTALLED_APPS = [
     "saleor.webhook",
     "saleor.wishlist",
     "saleor.app",
+    "saleor.ccs",
+    "saleor.dms",
+    # "saleor.mms",
+    # "saleor.oms",
+    "saleor.pms",
+    # "saleor.sps",
     # External apps
     "versatileimagefield",
     "django_measurement",
@@ -344,7 +350,7 @@ LOGGING = {
     },
 }
 
-AUTH_USER_MODEL = "account.User"
+AUTH_USER_MODEL = "ccs.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {
