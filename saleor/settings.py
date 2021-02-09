@@ -64,7 +64,7 @@ INTERNAL_IPS = get_list(os.environ.get("INTERNAL_IPS", "127.0.0.1"))
 
 DATABASES = {
     "default": dj_database_url.config(
-        default="postgres://saleor:saleor@localhost:5432/saleor", conn_max_age=600
+        default="postgres://ue3o06vsm0i25:p104c18c069e03f7365acb1f77fd1cbc1eaa8da6efa4c5683eb64443ba38d8fca@ec2-52-200-95-147.compute-1.amazonaws.com:5432/d5j3jj41ovbums",conn_max_age=600
     )
 }
 
