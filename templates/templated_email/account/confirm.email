@@ -7,8 +7,10 @@
 {% block plain %}
 {% include 'templated_email/shared/_header.email' %}
 {% blocktrans context "Account confirmation e-mail text" %}
-In order to log into {{ site_name }}, you have to confirm your email address first.
-Please click the link below to do so and log into your account.
+下記のサイトに加入していただいて感謝します。
+ {{ site_name }}, まず、あなたのメールを承認してください。
+
+下記のリンクをクリックして活性化をしてください。
 {% endblocktrans %}
 
 {{ confirm_url | safe }}
