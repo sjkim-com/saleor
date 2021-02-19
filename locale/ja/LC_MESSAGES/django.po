@@ -152,8 +152,8 @@ msgstr ""
 msgctxt "Account confirmation e-mail text"
 msgid ""
 "\n"
-"In order to log into %(site_name)s, you have to confirm your email address first.\n"
-"Please click the link below to do so and log into your account.\n"
+"下記のサイトに加入していただいて感謝します。\n{{ site_name }}, まず、あなたのメールを承認してください。"
+"下記のリンクをクリックして活性化をしてください。\n"
 msgstr ""
 
 #: templates/templated_email/account/email_changed_notification.email:4
@@ -182,8 +182,8 @@ msgstr ""
 msgctxt "Password reset e-mail text"
 msgid ""
 "\n"
-"You're receiving this e-mail because you or someone else has requested a password for your user account at %(site_name)s.\n"
-"It can be safely ignored if you did not request a password reset. Click the link below to reset your password.\n"
+"あなたまたは他の誰かが{{ site_name }}であなたのユーザーアカウントのパスワードを要求したため、この電子メールを受信しています。\n"
+"パスワードのリセットを要求しなかった場合は、無視しても問題ありません。 以下のリンクをクリックして、パスワードをリセットしてください。\n"
 msgstr ""
 
 #: templates/templated_email/account/request_email_change.email:9
@@ -477,7 +477,7 @@ msgstr ""
 #: templates/templated_email/source/staff_confirm_order.mjml:14
 #: templates/templated_email/source/update_fulfillment.mjml:13
 msgctxt "Standard e-mail greeting"
-msgid "Hi!"
+msgid "こんにちわん！!"
 msgstr ""
 
 #: templates/templated_email/source/account_delete.mjml:16
